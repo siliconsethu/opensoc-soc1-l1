@@ -1,0 +1,31 @@
+// OpenSoC Tier-1 — prim_assert.sv stub
+// Uses default macro arguments (OpenTitan pattern) so both 2-arg and 4-arg
+// call sites compile correctly: `ASSERT(NAME,PROP) and `ASSERT(NAME,PROP,CLK,RST)
+`ifndef PRIM_ASSERT_SV
+`define PRIM_ASSERT_SV
+
+`define ASSERT_I(NAME, PROP)
+`define ASSERT_INIT(NAME, PROP)
+`define ASSERT_FINAL(NAME, PROP)
+`define ASSERT(NAME, PROP, CLK = clk_i, RST = !rst_ni)
+`define ASSERT_NEVER(NAME, PROP, CLK = clk_i, RST = !rst_ni)
+`define ASSERT_KNOWN(NAME, SIGNAL, CLK = clk_i, RST = !rst_ni)
+`define ASSERT_PULSE(NAME, SIGNAL, CLK = clk_i, RST = !rst_ni)
+`define COVER(NAME, PROP, CLK = clk_i, RST = !rst_ni)
+`define ASSUME(NAME, PROP, CLK = clk_i, RST = !rst_ni)
+`define ASSUME_I(NAME, PROP)
+`define ASSERT_INIT_NET(NAME, PROP)
+`define ASSERT_KNOWN_IF(NAME, SIGNAL, CLK = clk_i, RST = !rst_ni)
+
+// Additional OpenTitan assertion macros
+`define ASSERT_PRIM_REG_WE_ONEHOT_ERROR_TRIGGER_ALERT(NAME, REG, ALERT)
+`define ASSERT_PRIM_COUNT_ERROR_TRIGGER_ALERT(NAME, COUNT, ALERT)
+`define ASSERT_PRIM_FSM_ERROR_TRIGGER_ALERT(NAME, FSM, ALERT)
+`define ASSERT_PRIM_ONEHOT_ERROR_TRIGGER_ALERT(NAME, SIGNAL, ALERT)
+`define ASSERT_PRIM_DOUBLE_LFSR_ERROR_TRIGGER_ALERT(NAME, LFSR, ALERT)
+`define ASSERT_PRIM_TOKEN_REQUEST_ERROR_TRIGGER_ALERT(NAME, REQ, ALERT)
+`define ASSERT_PRIM_ARB_ERROR_TRIGGER_ALERT(NAME, ARB, ALERT)
+`define PRIM_FLOP_SPARSE_FSM(FSM_NAME, STATE_LOGIC, NEXT_STATE_LOGIC, STATE_T, RESET_VAL)
+`define PRIM_FLOP(D, Q, RESET_VAL)
+
+`endif // PRIM_ASSERT_SV

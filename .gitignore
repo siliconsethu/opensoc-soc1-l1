@@ -1,0 +1,30 @@
+# Build outputs
+build/
+*.wlf
+*.ucdb
+transcript
+vsim.wlf
+
+# QuestaSim compiled libraries
+work/
+work_*/
+*.lib
+
+# Firmware build artefacts
+sw/tests/*.elf
+sw/tests/*.bin
+sw/tests/*.hex
+sw/tests/*.map
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
