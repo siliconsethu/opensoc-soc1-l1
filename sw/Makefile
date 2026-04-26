@@ -12,10 +12,12 @@
 #   2. riscv-none-elf-gcc       (xpack newer naming)
 #   3. riscv64-unknown-elf-gcc  (Ubuntu apt gcc-riscv64-unknown-elf)
 # Set RISCV=/path/to/xpack to override.
+#
+# Note: all paths are relative so this Makefile is safe on paths with spaces.
 
-SW_DIR   := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-TEST_DIR := $(SW_DIR)tests
-BOOT_DIR := $(SW_DIR)boot
+TEST_DIR := tests
+BOOT_DIR := boot
+SCRIPTS  := ../scripts
 
 ifdef RISCV
   GCC := $(RISCV)/bin/riscv32-unknown-elf-gcc
@@ -42,8 +44,6 @@ CFLAGS := -march=rv32im -mabi=ilp32 -nostdlib -nostartfiles -Os \
 OBJCOPY_CANDIDATES := riscv32-unknown-elf-objcopy riscv-none-elf-objcopy riscv64-unknown-elf-objcopy
 OBJCOPY := $(firstword $(foreach c,$(OBJCOPY_CANDIDATES),$(shell which $(c) 2>/dev/null)))
 
-BIN2HEX := python3 $(SW_DIR)/../scripts/bin2hex.py
-
 .PHONY: all gpio_l1 uart_l1 clean
 
 all: gpio_l1 uart_l1
@@ -52,14 +52,14 @@ gpio_l1:
 	$(GCC) $(CFLAGS) $(BOOT_DIR)/crt0.S $(TEST_DIR)/gpio_test.c \
 	  -o $(TEST_DIR)/gpio_test_l1.elf
 	$(OBJCOPY) -O binary $(TEST_DIR)/gpio_test_l1.elf $(TEST_DIR)/gpio_test_l1.bin
-	$(BIN2HEX) $(TEST_DIR)/gpio_test_l1.bin $(TEST_DIR)/gpio_test_l1.hex
+	python3 $(SCRIPTS)/bin2hex.py $(TEST_DIR)/gpio_test_l1.bin $(TEST_DIR)/gpio_test_l1.hex
 	@echo "[HEX] gpio_test_l1.hex"
 
 uart_l1:
 	$(GCC) $(CFLAGS) $(BOOT_DIR)/crt0.S $(TEST_DIR)/uart_test.c \
 	  -o $(TEST_DIR)/uart_test_l1.elf
 	$(OBJCOPY) -O binary $(TEST_DIR)/uart_test_l1.elf $(TEST_DIR)/uart_test_l1.bin
-	$(BIN2HEX) $(TEST_DIR)/uart_test_l1.bin $(TEST_DIR)/uart_test_l1.hex
+	python3 $(SCRIPTS)/bin2hex.py $(TEST_DIR)/uart_test_l1.bin $(TEST_DIR)/uart_test_l1.hex
 	@echo "[HEX] uart_test_l1.hex"
 
 clean:
