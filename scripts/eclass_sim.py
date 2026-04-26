@@ -148,31 +148,32 @@ def main():
     defines = ["+define+SIM", "+define+USE_ISS"]
     suppress = ["-suppress", "2583", "-suppress", "2718", "-suppress", "8386"]
 
+    work_lib = str(build / "work")
     compile_cmd = [
-        vlog, "-work", "work", "-sv", "-mfcu",
+        vlog, "-work", work_lib, "-sv", "-mfcu",
         *defines, *suppress,
         f"+incdir+{repo}",
         "-f", str(repo / "rtl" / "questa_src_eclass.f"),
         str(repo / cfg["tb"]),
     ]
-    run(compile_cmd, cwd=build)
+    run(compile_cmd, cwd=repo)
 
     opt_top = cfg["top"] + "_opt"
-    vopt_cmd = [vopt, "-work", "work", "+acc", "-o", opt_top, cfg["top"]]
+    vopt_cmd = [vopt, "-work", work_lib, "+acc", "-o", opt_top, cfg["top"]]
     run(vopt_cmd, cwd=build)
 
     if args.gui:
         do_str = "log -r /*; " if args.waves else ""
         do_str += "run -all"
         vsim_cmd = [
-            vsim, "-work", "work", "-t", "1ps",
+            vsim, "-work", work_lib, "-t", "1ps",
             f"+HEX_FILE={hex_path}",
             "-do", do_str,
             opt_top,
         ]
     else:
         vsim_cmd = [
-            vsim, "-work", "work", "-t", "1ps", "-batch",
+            vsim, "-work", work_lib, "-t", "1ps", "-batch",
             f"+HEX_FILE={hex_path}",
             "-do", "run -all; quit -f",
             opt_top,
