@@ -10,7 +10,7 @@ work/
 work_*/
 *.lib
 
-# Firmware build artefacts
+# Firmware
 sw/tests/*.elf
 sw/tests/*.bin
 sw/tests/*.hex
@@ -19,12 +19,10 @@ sw/tests/*.map
 # Python
 __pycache__/
 *.pyc
-*.pyo
 
-# Editor / OS
+# OS / editor
 .DS_Store
 Thumbs.db
 *.swp
-*.swo
 .vscode/
 .idea/

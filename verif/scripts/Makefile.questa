@@ -1,24 +1,24 @@
 ##############################################################################
-# OpenSoC Tier-1 — QuestaSim Makefile (Level-1 public release)
+# OpenSoC Tier-1 -- QuestaSim Makefile (Level-1 public release)
 # File   : verif/scripts/Makefile.questa
 #
 # Run from repo root:
 #   make -f verif/scripts/Makefile.questa eclass_gpio_l1
 #   make -f verif/scripts/Makefile.questa eclass_uart_l1
 #   make -f verif/scripts/Makefile.questa eclass_regression
+#   make -f verif/scripts/Makefile.questa clean
 #   make -f verif/scripts/Makefile.questa help
 #
 # Firmware must be built first:  make -C sw
-# Or use eclass_sim.py which builds firmware automatically.
+# Or use eclass_sim.py which auto-builds firmware.
 #
-# Requires: QUESTA_HOME set in environment, or vsim on PATH.
+# Requires: QUESTA_HOME set, or vsim on PATH.
 ##############################################################################
-
-SEED     ?= 42
 
 REPO_ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST)))../..)
 RTL_DIR   := $(REPO_ROOT)/rtl
 VERIF_DIR := $(REPO_ROOT)/verif
+BUILD_DIR := $(REPO_ROOT)/build
 
 ifdef QUESTA_HOME
   QUESTA_BIN ?= $(QUESTA_HOME)/bin
@@ -30,12 +30,10 @@ else
   QUESTA_BIN := $(patsubst %/,%,$(QUESTA_BIN))
 endif
 
-VLIB   := $(QUESTA_BIN)/vlib
-VLOG   := $(QUESTA_BIN)/vlog
-VOPT   := $(QUESTA_BIN)/vopt
-VSIM   := $(QUESTA_BIN)/vsim
-
-ECLASS_BUILD := $(REPO_ROOT)/build
+VLIB := $(QUESTA_BIN)/vlib
+VLOG := $(QUESTA_BIN)/vlog
+VOPT := $(QUESTA_BIN)/vopt
+VSIM := $(QUESTA_BIN)/vsim
 
 ECLASS_VLOG := \
   -work work -sv -mfcu \
@@ -50,8 +48,8 @@ define check_hex
 	@test -f $(1) || { \
 	  echo ""; \
 	  echo "  [ERROR] Hex file not found: $(1)"; \
-	  echo "  Build it:  make -C sw $(2)"; \
-	  echo "  Or run:    python scripts/eclass_sim.py $(3)"; \
+	  echo "  Build it first:  make -C sw $(2)"; \
+	  echo "  Or:  python scripts/eclass_sim.py $(3)  (auto-builds)"; \
 	  echo ""; \
 	  exit 1; \
 	}
@@ -60,61 +58,61 @@ endef
 .PHONY: eclass_gpio_l1
 eclass_gpio_l1:
 	$(call check_hex,$(HEX_GPIO_L1),gpio_l1,gpio_l1)
-	mkdir -p $(ECLASS_BUILD)/eclass_gpio_l1
-	cd $(ECLASS_BUILD)/eclass_gpio_l1 && $(VLIB) work
-	cd $(ECLASS_BUILD)/eclass_gpio_l1 && $(VLOG) $(ECLASS_VLOG) \
+	mkdir -p $(BUILD_DIR)/eclass_gpio_l1
+	cd $(BUILD_DIR)/eclass_gpio_l1 && $(VLIB) work
+	cd $(BUILD_DIR)/eclass_gpio_l1 && $(VLOG) $(ECLASS_VLOG) \
 	  -f $(RTL_DIR)/questa_src_eclass.f \
 	  $(VERIF_DIR)/tb/t1_eclass_gpio_tb.sv 2>&1 | tee compile.log
-	cd $(ECLASS_BUILD)/eclass_gpio_l1 && $(VOPT) -work work +acc \
+	cd $(BUILD_DIR)/eclass_gpio_l1 && $(VOPT) -work work +acc \
 	  -o t1_eclass_gpio_tb_opt t1_eclass_gpio_tb 2>&1 | tee vopt.log
-	cd $(ECLASS_BUILD)/eclass_gpio_l1 && $(VSIM) -work work -batch -t 1ps \
+	cd $(BUILD_DIR)/eclass_gpio_l1 && $(VSIM) -work work -batch -t 1ps \
 	  +HEX_FILE=$(HEX_GPIO_L1) \
 	  -do "run -all; quit -f" \
 	  t1_eclass_gpio_tb_opt 2>&1 | tee sim.log
-	@grep -c "\[TB\] PASS" $(ECLASS_BUILD)/eclass_gpio_l1/sim.log \
-	  && echo "GPIO L1: PASS" || echo "GPIO L1: FAIL"
+	@grep -c "\[TB\] PASS" $(BUILD_DIR)/eclass_gpio_l1/sim.log \
+	  && echo "=== GPIO L1: PASS ===" || echo "=== GPIO L1: FAIL ==="
 
 .PHONY: eclass_uart_l1
 eclass_uart_l1:
 	$(call check_hex,$(HEX_UART_L1),uart_l1,uart_l1)
-	mkdir -p $(ECLASS_BUILD)/eclass_uart_l1
-	cd $(ECLASS_BUILD)/eclass_uart_l1 && $(VLIB) work
-	cd $(ECLASS_BUILD)/eclass_uart_l1 && $(VLOG) $(ECLASS_VLOG) \
+	mkdir -p $(BUILD_DIR)/eclass_uart_l1
+	cd $(BUILD_DIR)/eclass_uart_l1 && $(VLIB) work
+	cd $(BUILD_DIR)/eclass_uart_l1 && $(VLOG) $(ECLASS_VLOG) \
 	  -f $(RTL_DIR)/questa_src_eclass.f \
 	  $(VERIF_DIR)/tb/t1_eclass_uart_tb.sv 2>&1 | tee compile.log
-	cd $(ECLASS_BUILD)/eclass_uart_l1 && $(VOPT) -work work +acc \
+	cd $(BUILD_DIR)/eclass_uart_l1 && $(VOPT) -work work +acc \
 	  -o t1_eclass_uart_tb_opt t1_eclass_uart_tb 2>&1 | tee vopt.log
-	cd $(ECLASS_BUILD)/eclass_uart_l1 && $(VSIM) -work work -batch -t 1ps \
+	cd $(BUILD_DIR)/eclass_uart_l1 && $(VSIM) -work work -batch -t 1ps \
 	  +HEX_FILE=$(HEX_UART_L1) \
 	  -do "run -all; quit -f" \
 	  t1_eclass_uart_tb_opt 2>&1 | tee sim.log
-	@grep -c "\[TB\] PASS" $(ECLASS_BUILD)/eclass_uart_l1/sim.log \
-	  && echo "UART L1: PASS" || echo "UART L1: FAIL"
+	@grep -c "\[TB\] PASS" $(BUILD_DIR)/eclass_uart_l1/sim.log \
+	  && echo "=== UART L1: PASS ===" || echo "=== UART L1: FAIL ==="
 
 .PHONY: eclass_regression
 eclass_regression: eclass_gpio_l1 eclass_uart_l1
 	@echo ""
-	@echo "=== E-class L1 regression complete ==="
+	@echo "========================================="
+	@echo "  E-class Level-1 regression: complete"
+	@echo "========================================="
 
 .PHONY: clean
 clean:
-	rm -rf $(ECLASS_BUILD)/eclass_gpio_l1 $(ECLASS_BUILD)/eclass_uart_l1
+	rm -rf $(BUILD_DIR)/eclass_gpio_l1 $(BUILD_DIR)/eclass_uart_l1
 	@echo "[CLEAN] Done"
 
 .PHONY: help
 help:
 	@echo ""
-	@echo "OpenSoC Tier-1 — E-class Level-1 Makefile"
+	@echo "OpenSoC Tier-1 E-class Level-1 -- QuestaSim Makefile"
 	@echo ""
-	@echo "  make -f verif/scripts/Makefile.questa eclass_gpio_l1"
-	@echo "  make -f verif/scripts/Makefile.questa eclass_uart_l1"
-	@echo "  make -f verif/scripts/Makefile.questa eclass_regression"
-	@echo "  make -f verif/scripts/Makefile.questa clean"
+	@echo "  eclass_gpio_l1     Compile + simulate GPIO Level-1 test"
+	@echo "  eclass_uart_l1     Compile + simulate UART Level-1 test"
+	@echo "  eclass_regression  Run both L1 tests sequentially"
+	@echo "  clean              Remove build directories"
 	@echo ""
 	@echo "Variables:"
-	@echo "  QUESTA_HOME  QuestaSim install root (auto-detected if vsim on PATH)"
-	@echo "  SEED         Random seed (default: 42)"
+	@echo "  QUESTA_HOME   QuestaSim install root (auto-detected if vsim on PATH)"
 	@echo ""
-	@echo "Firmware must be built first:  make -C sw"
-	@echo "Tip: python scripts/eclass_sim.py <test>  builds firmware automatically."
+	@echo "Tip: python scripts/eclass_sim.py gpio_l1   (auto-builds firmware)"
 	@echo ""

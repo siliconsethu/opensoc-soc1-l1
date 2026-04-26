@@ -38,11 +38,7 @@ module t1_eclass_uart_tb;
   // Baud period in clock cycles — must match C test configuration:
   //   Level-1: NCO_SIM = 0x2000 (8192) → baud_period = 65536/8192 = 8 cycles
   //   Level-2: baud_div = 10           → baud_period = 10 cycles
-`ifdef LEVEL2
-  localparam int BAUD_CYCLES = 10;
-`else
   localparam int BAUD_CYCLES = 8;
-`endif
 
   logic clk, rst_n;
   initial clk = 0;
@@ -68,16 +64,6 @@ module t1_eclass_uart_tb;
     .gpio_in_i     ( gpio_in    ),
     .gpio_out_o    ( gpio_out   ),
     .gpio_oe_o     ( gpio_oe    ),
-`ifdef LEVEL2
-    .spi_sck_o     (            ),
-    .spi_csb_o     (            ),
-    .spi_sd_i      ( 1'b0       ),
-    .spi_sd_o      (            ),
-    .i2c_scl_o     (            ),
-    .i2c_scl_i     ( 1'b1       ),
-    .i2c_sda_o     (            ),
-    .i2c_sda_i     ( 1'b1       ),
-`endif
     .halt_o        ( cpu_halt   )
   );
 
@@ -85,11 +71,7 @@ module t1_eclass_uart_tb;
   string hex_file;
   initial begin
     if (!$value$plusargs("HEX_FILE=%s", hex_file))
-`ifdef LEVEL2
-      hex_file = "build/sw/uart_test_l2.hex";
-`else
       hex_file = "build/sw/uart_test_l1.hex";
-`endif
     @(posedge clk);  // wait past time-0 so SRAM zero-init completes first
     $readmemh(hex_file, u_soc.u_sram.mem);
     $display("[TB] Loaded: %s", hex_file);

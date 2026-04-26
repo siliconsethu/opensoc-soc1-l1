@@ -1,4 +1,4 @@
-# OpenSoC Tier-1 — Firmware Makefile (Level-1 public release)
+# OpenSoC Tier-1 -- Firmware Makefile (Level-1 public release)
 # Builds firmware hex files for the E-class Level-1 SoC.
 #
 # Usage (from repo root):
@@ -17,7 +17,6 @@ SW_DIR   := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 TEST_DIR := $(SW_DIR)tests
 BOOT_DIR := $(SW_DIR)boot
 
-# Toolchain auto-detect
 ifdef RISCV
   GCC := $(RISCV)/bin/riscv32-unknown-elf-gcc
   ifeq ($(wildcard $(GCC)),)
@@ -40,6 +39,9 @@ endif
 CFLAGS := -march=rv32im -mabi=ilp32 -nostdlib -nostartfiles -Os \
           -T $(BOOT_DIR)/eclass.ld
 
+OBJCOPY_CANDIDATES := riscv32-unknown-elf-objcopy riscv-none-elf-objcopy riscv64-unknown-elf-objcopy
+OBJCOPY := $(firstword $(foreach c,$(OBJCOPY_CANDIDATES),$(shell which $(c) 2>/dev/null)))
+
 BIN2HEX := python3 $(SW_DIR)/../scripts/bin2hex.py
 
 .PHONY: all gpio_l1 uart_l1 clean
@@ -49,24 +51,14 @@ all: gpio_l1 uart_l1
 gpio_l1:
 	$(GCC) $(CFLAGS) $(BOOT_DIR)/crt0.S $(TEST_DIR)/gpio_test.c \
 	  -o $(TEST_DIR)/gpio_test_l1.elf
-	riscv32-unknown-elf-objcopy -O binary $(TEST_DIR)/gpio_test_l1.elf \
-	  $(TEST_DIR)/gpio_test_l1.bin 2>/dev/null || \
-	riscv-none-elf-objcopy -O binary $(TEST_DIR)/gpio_test_l1.elf \
-	  $(TEST_DIR)/gpio_test_l1.bin 2>/dev/null || \
-	riscv64-unknown-elf-objcopy -O binary $(TEST_DIR)/gpio_test_l1.elf \
-	  $(TEST_DIR)/gpio_test_l1.bin
+	$(OBJCOPY) -O binary $(TEST_DIR)/gpio_test_l1.elf $(TEST_DIR)/gpio_test_l1.bin
 	$(BIN2HEX) $(TEST_DIR)/gpio_test_l1.bin $(TEST_DIR)/gpio_test_l1.hex
 	@echo "[HEX] gpio_test_l1.hex"
 
 uart_l1:
 	$(GCC) $(CFLAGS) $(BOOT_DIR)/crt0.S $(TEST_DIR)/uart_test.c \
 	  -o $(TEST_DIR)/uart_test_l1.elf
-	riscv32-unknown-elf-objcopy -O binary $(TEST_DIR)/uart_test_l1.elf \
-	  $(TEST_DIR)/uart_test_l1.bin 2>/dev/null || \
-	riscv-none-elf-objcopy -O binary $(TEST_DIR)/uart_test_l1.elf \
-	  $(TEST_DIR)/uart_test_l1.bin 2>/dev/null || \
-	riscv64-unknown-elf-objcopy -O binary $(TEST_DIR)/uart_test_l1.elf \
-	  $(TEST_DIR)/uart_test_l1.bin
+	$(OBJCOPY) -O binary $(TEST_DIR)/uart_test_l1.elf $(TEST_DIR)/uart_test_l1.bin
 	$(BIN2HEX) $(TEST_DIR)/uart_test_l1.bin $(TEST_DIR)/uart_test_l1.hex
 	@echo "[HEX] uart_test_l1.hex"
 

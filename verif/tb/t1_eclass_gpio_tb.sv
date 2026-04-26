@@ -43,17 +43,10 @@ module t1_eclass_gpio_tb;
   logic [31:0] gpio_in, gpio_out, gpio_oe;
   logic        uart_tx, uart_rx;
   logic        cpu_halt;
-`ifdef LEVEL2
-  logic        spi_sck, spi_csb, spi_sd_i, spi_sd_o;
-  logic        i2c_scl_o, i2c_sda_o;
-`endif
 
   initial begin
     uart_rx = 1'b1;
     gpio_in = 32'h0;
-`ifdef LEVEL2
-    spi_sd_i = 1'b0;
-`endif
   end
 
   t1_soc_top_eclass u_soc (
@@ -70,16 +63,6 @@ module t1_eclass_gpio_tb;
     .gpio_in_i     ( gpio_in    ),
     .gpio_out_o    ( gpio_out   ),
     .gpio_oe_o     ( gpio_oe    ),
-`ifdef LEVEL2
-    .spi_sck_o     ( spi_sck    ),
-    .spi_csb_o     ( spi_csb    ),
-    .spi_sd_i      ( spi_sd_i   ),
-    .spi_sd_o      ( spi_sd_o   ),
-    .i2c_scl_o     ( i2c_scl_o  ),
-    .i2c_scl_i     ( 1'b1       ),
-    .i2c_sda_o     ( i2c_sda_o  ),
-    .i2c_sda_i     ( 1'b1       ),
-`endif
     .halt_o        ( cpu_halt   )
   );
 
@@ -87,11 +70,7 @@ module t1_eclass_gpio_tb;
   string hex_file;
   initial begin
     if (!$value$plusargs("HEX_FILE=%s", hex_file))
-`ifdef LEVEL2
-      hex_file = "sw/tests/gpio_test_l2.hex";
-`else
       hex_file = "sw/tests/gpio_test_l1.hex";
-`endif
     @(posedge clk);  // wait past time-0 so SRAM zero-init completes first
     $readmemh(hex_file, u_soc.u_sram.mem);
     $display("[TB] Loaded: %s", hex_file);
@@ -104,11 +83,7 @@ module t1_eclass_gpio_tb;
     gpio_in = 32'h0;
     @(posedge rst_n);
     forever begin
-`ifdef LEVEL2
-      for (int b = 0; b < 32; b++) begin
-`else
       for (int b = 0; b < 16; b++) begin
-`endif
         gpio_in = 32'h1 << b;
         repeat (HOLD_CYCS) @(posedge clk);
       end
@@ -117,33 +92,6 @@ module t1_eclass_gpio_tb;
 
   // ── gpio_out / gpio_oe pin-level observer ──────────────────────────────────
   // All expected patterns must have been seen before PASS is declared.
-`ifdef LEVEL2
-  // Level-2: 32-bit GPIO patterns
-  int obs_oe_ff;        // gpio_oe[31:0] == 32'hFFFF_FFFF
-  int obs_out_aaaa;     // gpio_out[31:0] == 32'hAAAA_AAAA
-  int obs_out_5555;     // gpio_out[31:0] == 32'h5555_5555
-  int obs_out_3c3c;     // gpio_out[31:0] == 32'h3C3C_3C3C
-  int obs_walk1_bits;   // bitmask[31:0]: bit b set if gpio_out[31:0]==(1<<b) seen
-
-  initial begin
-    obs_oe_ff      = 0;
-    obs_out_aaaa   = 0;
-    obs_out_5555   = 0;
-    obs_out_3c3c   = 0;
-    obs_walk1_bits = 0;
-    @(posedge rst_n);
-    forever begin
-      @(posedge clk);
-      if (gpio_oe[31:0]  === 32'hFFFF_FFFF) obs_oe_ff    = 1;
-      if (gpio_out[31:0] === 32'hAAAA_AAAA) obs_out_aaaa = 1;
-      if (gpio_out[31:0] === 32'h5555_5555) obs_out_5555 = 1;
-      if (gpio_out[31:0] === 32'h3C3C_3C3C) obs_out_3c3c = 1;
-      for (int b = 0; b < 32; b++)
-        if (gpio_out[31:0] === (32'h1 << b))
-          obs_walk1_bits |= (1 << b);
-    end
-  end
-`else
   // Level-1: 16-bit GPIO patterns
   int obs_oe_ff;        // gpio_oe[15:0] == 0xFFFF (all-outputs)
   int obs_out_aaaa;     // gpio_out[15:0] == 0xAAAA
@@ -169,7 +117,6 @@ module t1_eclass_gpio_tb;
           obs_walk1_bits |= (1 << b);
     end
   end
-`endif
 
   // ── Main test flow — poll TOHOST, then audit pin observations ─────────────
   int          cycle_cnt, fail_cnt;
@@ -181,11 +128,7 @@ module t1_eclass_gpio_tb;
     rst_n     = 1'b0;
 
     $display("[TB] ===== E-class GPIO Test [%s] =====",
-`ifdef LEVEL2
-             "LEVEL-2 32-bit GPIO"
-`else
              `TBL_LABEL
-`endif
              );
     $display("[TB] Timeout: %0d cycles, HoldCycs: %0d", MAX_CYCLES, HOLD_CYCS);
 
@@ -225,29 +168,6 @@ module t1_eclass_gpio_tb;
     end
 
     // ── Pin-level checks ────────────────────────────────────────────────────
-`ifdef LEVEL2
-    if (!obs_oe_ff) begin
-      $display("[FAIL] gpio_oe[31:0] never reached 32'hFFFF_FFFF");
-      fail_cnt++;
-    end
-    if (!obs_out_aaaa) begin
-      $display("[FAIL] gpio_out[31:0] never showed 32'hAAAA_AAAA");
-      fail_cnt++;
-    end
-    if (!obs_out_5555) begin
-      $display("[FAIL] gpio_out[31:0] never showed 32'h5555_5555");
-      fail_cnt++;
-    end
-    if (!obs_out_3c3c) begin
-      $display("[FAIL] gpio_out[31:0] never showed 32'h3C3C_3C3C");
-      fail_cnt++;
-    end
-    if (obs_walk1_bits !== 32'hFFFF_FFFF) begin
-      $display("[FAIL] Walk-1 on gpio_out[31:0] incomplete: saw=0x%08h missing=0x%08h",
-               obs_walk1_bits, 32'hFFFF_FFFF ^ obs_walk1_bits);
-      fail_cnt++;
-    end
-`else
     if (!obs_oe_ff) begin
       $display("[FAIL] gpio_oe[15:0] never reached 16'hFFFF (DIRECT_OE write not reflected)");
       fail_cnt++;
@@ -269,7 +189,6 @@ module t1_eclass_gpio_tb;
                obs_walk1_bits[15:0], 16'hFFFF ^ obs_walk1_bits[15:0]);
       fail_cnt++;
     end
-`endif
 
     $display("[TB] ==========================================");
     if (fail_cnt == 0)
