@@ -1,0 +1,9 @@
+* text=auto
+*.sv text eol=lf
+*.f  text eol=lf
+*.c  text eol=lf
+*.S  text eol=lf
+*.py text eol=lf
+*.md text eol=lf
+*.ld text eol=lf
+Makefile text eol=lf
