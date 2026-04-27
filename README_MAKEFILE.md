@@ -4,24 +4,22 @@
 
 | Interface | File | Best for |
 |---|---|---|
-| **Python script** | `scripts/eclass_sim.py` | All E-class tests, any OS, auto-builds firmware |
+| **Python script** | `scripts/eclass_sim.py` | All L1 tests, any OS, auto-builds firmware |
+| **Shell wrapper** | `eclass_sim` | Wraps eclass_sim.py, auto-detects Python on RHEL |
 | **Firmware make** | `sw/Makefile` | Building RISC-V hex files |
 | **Root Makefile** | `Makefile` | QuestaSim + Verilator targets, Linux / Git Bash |
 | **Questa Makefile** | `verif/scripts/Makefile.questa` | Standalone QuestaSim wrapper |
 
 ---
 
-## E-class Simulation — Python (recommended)
+## E-class Simulation -- Python (recommended)
 
 Works on Windows, Linux, and macOS. Automatically builds firmware before simulating.
 
 ```bash
 python scripts/eclass_sim.py gpio_l1
-python scripts/eclass_sim.py gpio_l2
 python scripts/eclass_sim.py uart_l1
-python scripts/eclass_sim.py uart_l2
 python scripts/eclass_sim.py cov_l1 --coverage
-python scripts/eclass_sim.py cov_l2 --coverage
 ```
 
 Options:
@@ -40,40 +38,33 @@ Build artefacts: `build/eclass_<test>/compile.log`, `vopt.log`, `sim.log`, `<tes
 
 ---
 
-## Firmware Build — sw/Makefile
+## Firmware Build -- sw/Makefile
 
 ```bash
 # From repo root
-make -C sw           # build all 4 hex files
+make -C sw           # build all hex files
 make -C sw gpio_l1
-make -C sw gpio_l2
 make -C sw uart_l1
-make -C sw uart_l2
 make -C sw clean
 
 # Override toolchain
 make -C sw CROSS=riscv64-unknown-elf-
 ```
 
-Hex outputs: `sw/tests/gpio_test_l1.hex`, `sw/tests/gpio_test_l2.hex`,
-`sw/tests/uart_test_l1.hex`, `sw/tests/uart_test_l2.hex`
+Hex outputs: `sw/tests/gpio_test_l1.hex`, `sw/tests/uart_test_l1.hex`
 
-Toolchain search order: `riscv32-unknown-elf-gcc` → `riscv-none-elf-gcc` → `riscv64-unknown-elf-gcc`.
+Toolchain search order: `riscv32-unknown-elf-gcc` -> `riscv-none-elf-gcc` -> `riscv64-unknown-elf-gcc`.
 
 ---
 
-## Makefile.questa — WSL2 / Linux / Git Bash
+## Makefile.questa -- WSL2 / Linux / Git Bash
 
 Located at `verif/scripts/Makefile.questa`. Run from the repo root:
 
 ```bash
 make -f verif/scripts/Makefile.questa eclass_gpio_l1
-make -f verif/scripts/Makefile.questa eclass_gpio_l2
 make -f verif/scripts/Makefile.questa eclass_uart_l1
-make -f verif/scripts/Makefile.questa eclass_uart_l2
-make -f verif/scripts/Makefile.questa eclass_cov_l2
 make -f verif/scripts/Makefile.questa eclass_regression      # gpio_l1 + uart_l1
-make -f verif/scripts/Makefile.questa eclass_regression_l2   # gpio_l2 + uart_l2 + cov_l2
 make -f verif/scripts/Makefile.questa clean
 ```
 
@@ -94,20 +85,14 @@ make -f verif/scripts/Makefile.questa clean
 ```
 vlog  -sv -mfcu -suppress 2583,2718,8386
       +define+SIM +define+USE_ISS
-      [+define+LEVEL2 +define+TEST_LEVEL2]   # for _l2 tests
-      [+cover=bcesfx]                         # for cov_l2
       +incdir+<repo_root>                     # for verif/include/tb_level.svh
       rtl/questa_src_eclass.f
-      [verif/coverage/t1_l2_func_cov.sv]
       verif/tb/<top>.sv
 
 vopt  +acc -o <top>_opt  <top>
-      [+cover=bcesfx]
 
 vsim  -batch -t 1ps
       +HEX_FILE=<path>
-      [-coverage -coverstore build/eclass_<test>/coverage]
-      [-wlf build/eclass_<test>/<test>.wlf]
       <top>_opt
       -do "run -all; quit -f"
 ```
@@ -118,9 +103,9 @@ vsim  -batch -t 1ps
 
 | ID | Reason |
 |----|--------|
-| `2583` | `always_comb` sensitivity list auto-generated — normal in SV |
+| `2583` | `always_comb` sensitivity list auto-generated -- normal in SV |
 | `2718` | Implicit wire declarations in OpenTitan vendor IP |
-| `8386` | Missing `timescale` in some vendor files — harmless with `-mfcu` |
+| `8386` | Missing `timescale` in some vendor files -- harmless with `-mfcu` |
 
 ---
 
@@ -130,13 +115,13 @@ vsim  -batch -t 1ps
 |------|----------|
 | `build/eclass_<test>/compile.log` | vlog output |
 | `build/eclass_<test>/vopt.log` | vopt output |
-| `build/eclass_<test>/sim.log` | vsim transcript — PASS/FAIL markers |
+| `build/eclass_<test>/sim.log` | vsim transcript -- PASS/FAIL markers |
 | `build/eclass_<test>/<test>.wlf` | Waveform database (if `--waves`) |
 | `build/eclass_<test>/coverage_html/index.html` | Coverage report (if `--coverage`) |
 
 ---
 
-## Root Makefile — QuestaSim targets
+## Root Makefile -- QuestaSim targets
 
 ```bash
 # Structural regression (default)
@@ -145,8 +130,6 @@ make eclass_regression
 # Single CPU/ISS tests
 make t1_eclass_gpio_tb       # GPIO L1
 make t1_eclass_uart_tb       # UART L1
-make t1_gpio_cpu_tb_l2       # GPIO L2
-make t1_uart_cpu_tb_l2       # UART L2
 
 # L1 functional coverage
 make l1_coverage             # build + sim + HTML report
@@ -157,7 +140,7 @@ make clean
 
 ---
 
-## Verilator Simulation — open-source, no licence required
+## Verilator Simulation -- open-source, no licence required
 
 Requires **Verilator >= 5.0** (for `--timing` support).
 
@@ -201,17 +184,14 @@ brew install verilator
 # Build firmware first (if not already done)
 make -C sw
 
-# Lint only — fast check, no simulation binary built
+# Lint only -- fast check, no simulation binary built
 make verilator_lint_l1
-make verilator_lint_l2
 
 # Compile RTL + TB, then simulate
 make verilator_gpio_l1
 make verilator_uart_l1
-make verilator_gpio_l2
-make verilator_uart_l2
 
-# All four ISS tests in sequence
+# Both ISS tests in sequence
 make verilator_regression
 
 # With VCD waveform (open in GTKWave)
@@ -234,7 +214,7 @@ make verilator_clean
 | Path | Contents |
 |------|----------|
 | `build/verilator/<test>/build.log` | Verilator compile output |
-| `build/verilator/<test>/sim.log` | Simulation transcript — PASS/FAIL |
+| `build/verilator/<test>/sim.log` | Simulation transcript -- PASS/FAIL |
 | `build/verilator/<test>/sim.vcd` | Waveform (if `WAVES=1`) |
 
 ### Verilator flow
@@ -242,7 +222,6 @@ make verilator_clean
 ```
 verilator --binary --sv --timing
           +define+SIM +define+USE_ISS
-          [+define+LEVEL2 +define+TEST_LEVEL2]   # for _l2 tests
           +incdir+verif/include +incdir+.
           -Wno-WIDTHEXPAND -Wno-WIDTHTRUNC ...
           --Mdir build/verilator/<test>
