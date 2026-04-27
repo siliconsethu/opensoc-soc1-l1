@@ -152,12 +152,17 @@ def get_tests(repo):
             out_name="uart_test_l2",
             out_dir="build/sw",
         ),
+        "l1_cov": dict(
+            srcs=[repo / "sw" / "tests" / "l1_cov_test.c"],
+            out_name="l1_cov_test",
+            out_dir="sw/tests",
+        ),
     }
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 def main():
     ap = argparse.ArgumentParser(description="Build E-class firmware hex files")
-    ap.add_argument("--test", choices=["gpio_l1","gpio_l2","uart_l1","uart_l2"],
+    ap.add_argument("--test", choices=["gpio_l1","gpio_l2","uart_l1","uart_l2","l1_cov"],
                     help="Build one specific test (default: all)")
     ap.add_argument("--verbose", "-v", action="store_true")
     args = ap.parse_args()

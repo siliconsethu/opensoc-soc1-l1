@@ -6,7 +6,8 @@
 |---|---|---|
 | **Python script** | `scripts/eclass_sim.py` | All E-class tests, any OS, auto-builds firmware |
 | **Firmware make** | `sw/Makefile` | Building RISC-V hex files |
-| **Makefile** | `verif/scripts/Makefile.questa` | WSL2 / Linux / Git Bash |
+| **Root Makefile** | `Makefile` | QuestaSim + Verilator targets, Linux / Git Bash |
+| **Questa Makefile** | `verif/scripts/Makefile.questa` | Standalone QuestaSim wrapper |
 
 ---
 
@@ -19,6 +20,7 @@ python scripts/eclass_sim.py gpio_l1
 python scripts/eclass_sim.py gpio_l2
 python scripts/eclass_sim.py uart_l1
 python scripts/eclass_sim.py uart_l2
+python scripts/eclass_sim.py cov_l1 --coverage
 python scripts/eclass_sim.py cov_l2 --coverage
 ```
 
@@ -131,6 +133,127 @@ vsim  -batch -t 1ps
 | `build/eclass_<test>/sim.log` | vsim transcript — PASS/FAIL markers |
 | `build/eclass_<test>/<test>.wlf` | Waveform database (if `--waves`) |
 | `build/eclass_<test>/coverage_html/index.html` | Coverage report (if `--coverage`) |
+
+---
+
+## Root Makefile — QuestaSim targets
+
+```bash
+# Structural regression (default)
+make eclass_regression
+
+# Single CPU/ISS tests
+make t1_eclass_gpio_tb       # GPIO L1
+make t1_eclass_uart_tb       # UART L1
+make t1_gpio_cpu_tb_l2       # GPIO L2
+make t1_uart_cpu_tb_l2       # UART L2
+
+# L1 functional coverage
+make l1_coverage             # build + sim + HTML report
+
+# Clean all artefacts
+make clean
+```
+
+---
+
+## Verilator Simulation — open-source, no licence required
+
+Requires **Verilator >= 5.0** (for `--timing` support).
+
+### Install Verilator
+
+**Ubuntu / Debian:**
+```bash
+sudo apt install verilator
+verilator --version          # verify >= 5.0
+```
+
+**RHEL / CentOS (build from source):**
+```bash
+sudo yum install -y git autoconf flex bison make gcc-c++ python39
+
+# Bypass VCO python3 wrapper
+mkdir -p ~/bin
+ln -sf /usr/bin/python3.9 ~/bin/python3
+export PATH=~/bin:/usr/local/bin:$PATH
+
+git clone https://github.com/verilator/verilator.git
+cd verilator
+autoconf
+./configure --prefix=/usr/local
+touch verilator_gantt.1      # skip missing help2man
+make -j`nproc`
+sudo env PATH=$PATH make install
+
+export PATH=/usr/local/bin:$PATH
+verilator --version
+```
+
+**macOS:**
+```bash
+brew install verilator
+```
+
+### Verilator make targets
+
+```bash
+# Build firmware first (if not already done)
+make -C sw
+
+# Lint only — fast check, no simulation binary built
+make verilator_lint_l1
+make verilator_lint_l2
+
+# Compile RTL + TB, then simulate
+make verilator_gpio_l1
+make verilator_uart_l1
+make verilator_gpio_l2
+make verilator_uart_l2
+
+# All four ISS tests in sequence
+make verilator_regression
+
+# With VCD waveform (open in GTKWave)
+make verilator_gpio_l1 WAVES=1
+# Waveform: build/verilator/gpio_l1/sim.vcd
+
+# Clean Verilator build dirs only
+make verilator_clean
+```
+
+### Verilator variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `VERILATOR` | `verilator` | Path to Verilator binary |
+| `WAVES` | `0` | Set to `1` to emit VCD waveform via `--trace` |
+
+### Build artefacts
+
+| Path | Contents |
+|------|----------|
+| `build/verilator/<test>/build.log` | Verilator compile output |
+| `build/verilator/<test>/sim.log` | Simulation transcript — PASS/FAIL |
+| `build/verilator/<test>/sim.vcd` | Waveform (if `WAVES=1`) |
+
+### Verilator flow
+
+```
+verilator --binary --sv --timing
+          +define+SIM +define+USE_ISS
+          [+define+LEVEL2 +define+TEST_LEVEL2]   # for _l2 tests
+          +incdir+verif/include +incdir+.
+          -Wno-WIDTHEXPAND -Wno-WIDTHTRUNC ...
+          --Mdir build/verilator/<test>
+          --top-module <tb_module>
+          -f rtl/questa_src_eclass.f
+          verif/tb/<top>.sv
+          -o <test>
+
+# Run
+build/verilator/<test>/<test> +HEX_FILE=sw/tests/<test>.hex [+trace]
+```
 
 ---
 

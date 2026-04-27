@@ -11,12 +11,18 @@
 # 1. Build firmware (once)
 make -C sw
 
-# 2. Run any test — firmware rebuilt automatically if stale
+# 2. Run any test (QuestaSim) — firmware rebuilt automatically if stale
 python scripts/eclass_sim.py gpio_l1
 python scripts/eclass_sim.py gpio_l2
 python scripts/eclass_sim.py uart_l1
 python scripts/eclass_sim.py uart_l2
+python scripts/eclass_sim.py cov_l1 --coverage
 python scripts/eclass_sim.py cov_l2 --coverage
+
+# 3. Run with Verilator (open-source, no licence needed, requires >= 5.0)
+make verilator_gpio_l1
+make verilator_uart_l1
+make verilator_regression    # all four L1+L2 ISS tests
 ```
 
 ---

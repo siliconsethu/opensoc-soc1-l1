@@ -86,7 +86,9 @@ TESTS_ECLASS := t1_eclass_tb_top \
 
 .PHONY: all compile_eclass compile_eclass_iss compile_eclass_iss_cov \
         eclass_regression l1_coverage cov_report_l1 clean help \
-        $(TESTS_ECLASS)
+        $(TESTS_ECLASS) \
+        verilator_lint_l1 verilator_gpio_l1 verilator_uart_l1 \
+        verilator_regression verilator_clean
 
 ## Default target
 all: eclass_regression
@@ -424,6 +426,93 @@ l1_coverage: t1_l1_cov_tb cov_report_l1
 	@echo "=========================================="
 
 # =============================================================================
+# VERILATOR  (open-source simulation -- no QuestaSim licence required)
+# =============================================================================
+# Requires Verilator >= 5.0  (apt install verilator  or build from source)
+# See README_MAKEFILE.md for full install instructions including RHEL.
+#
+# Targets:
+#   make verilator_lint_l1         Lint L1 RTL (fast, no binary)
+#   make verilator_gpio_l1         Compile + simulate GPIO L1
+#   make verilator_uart_l1         Compile + simulate UART L1
+#   make verilator_regression      Both L1 tests in sequence
+#   make verilator_clean           Remove build/verilator/ dirs
+#
+# Options:
+#   WAVES=1    Emit VCD waveform to build/verilator/<test>/sim.vcd
+#   VERILATOR=/path/to/verilator   Override binary (default: verilator on PATH)
+# =============================================================================
+
+VERILATOR ?= verilator
+VERI_DIR  := $(BUILD_DIR)/verilator
+
+VERI_FLAGS := \
+	--sv --timing \
+	+incdir+verif/include +incdir+. \
+	-Wno-WIDTHEXPAND -Wno-WIDTHTRUNC \
+	-Wno-UNOPTFLAT -Wno-CASEINCOMPLETE \
+	-Wno-INITIALDLY -Wno-STMTDLY \
+	-Wno-MULTIDRIVEN -Wno-TIMESCALEMOD
+
+VERI_DEFS_L1 := +define+SIM +define+USE_ISS
+
+ifeq ($(WAVES),1)
+  VERI_TRACE     := --trace
+  VERI_TRACE_ARG := +trace
+else
+  VERI_TRACE     :=
+  VERI_TRACE_ARG :=
+endif
+
+verilator_lint_l1:
+	@mkdir -p $(BUILD_DIR)
+	@echo "=== Verilator lint: L1 RTL ==="
+	$(VERILATOR) --lint-only $(VERI_FLAGS) $(VERI_DEFS_L1) \
+	    -f $(SRC_F_ECLASS) 2>&1 | tee $(BUILD_DIR)/veri_lint_l1.log
+	@echo "  Log: $(BUILD_DIR)/veri_lint_l1.log"
+
+define VERI_SIM
+verilator_$(1):
+	@test -f sw/tests/$(4) || { \
+	    echo ""; \
+	    echo "  [ERROR] Firmware not found: sw/tests/$(4)"; \
+	    echo "  Build it first:  make -C sw $(1)"; \
+	    echo ""; \
+	    exit 1; \
+	}
+	@echo ""
+	@echo "=== Verilator $(1): compile ==="
+	@mkdir -p $(VERI_DIR)/$(1)
+	$(VERILATOR) --binary $(VERI_FLAGS) $(VERI_DEFS_L1) $(VERI_TRACE) \
+	    --Mdir $(VERI_DIR)/$(1) \
+	    --top-module $(5) \
+	    -f $(SRC_F_ECLASS) $(3) \
+	    -o $(1) 2>&1 | tee $(VERI_DIR)/$(1)/build.log
+	@echo "=== Verilator $(1): simulate ==="
+	$(VERI_DIR)/$(1)/$(1) \
+	    +HEX_FILE=$(CURDIR)/sw/tests/$(4) $(VERI_TRACE_ARG) \
+	    2>&1 | tee $(VERI_DIR)/$(1)/sim.log
+	@echo ""
+	@grep -E "\[TB\] PASS|\[TB\] FAIL|TIMEOUT" $(VERI_DIR)/$(1)/sim.log || true
+	@grep -q "\[TB\] PASS" $(VERI_DIR)/$(1)/sim.log \
+	    && echo "=== $(1): PASS ===" \
+	    || { echo "=== $(1): FAIL ==="; exit 1; }
+endef
+
+$(eval $(call VERI_SIM,gpio_l1,$(VERI_DEFS_L1),verif/tb/t1_eclass_gpio_tb.sv,gpio_test_l1.hex,t1_eclass_gpio_tb))
+$(eval $(call VERI_SIM,uart_l1,$(VERI_DEFS_L1),verif/tb/t1_eclass_uart_tb.sv,uart_test_l1.hex,t1_eclass_uart_tb))
+
+verilator_regression: verilator_gpio_l1 verilator_uart_l1
+	@echo ""
+	@echo "==========================================="
+	@echo "  Verilator L1 regression: all tests done"
+	@echo "==========================================="
+
+verilator_clean:
+	rm -rf $(VERI_DIR)
+	@echo "[CLEAN] Verilator build dirs removed"
+
+# =============================================================================
 # UTILITY
 # =============================================================================
 
@@ -456,6 +545,14 @@ help:
 	@echo "  make clean                     Delete work_eclass/ work_eclass_iss/ and logs"
 	@echo "  make help                      Show this message"
 	@echo ""
+	@echo "Verilator targets (requires Verilator >= 5.0):"
+	@echo "  make verilator_lint_l1         Lint L1 RTL (fast, no sim binary)"
+	@echo "  make verilator_gpio_l1         Compile + simulate GPIO L1"
+	@echo "  make verilator_uart_l1         Compile + simulate UART L1"
+	@echo "  make verilator_regression      Both L1 tests in sequence"
+	@echo "  make verilator_gpio_l1 WAVES=1 Build with VCD waveform output"
+	@echo "  make verilator_clean           Remove build/verilator/ dirs"
+	@echo ""
 	@echo "E-class structural tests:"
 	@for t in $(TESTS_ECLASS); do echo "  $$t"; done
 	@echo ""
@@ -464,4 +561,5 @@ help:
 	@echo "  make t1_eclass_gpio_tb"
 	@echo "  make t1_eclass_cpu_tb"
 	@echo "  make l1_coverage"
+	@echo "  make verilator_regression"
 	@echo ""
