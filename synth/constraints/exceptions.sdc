@@ -3,26 +3,50 @@
 #                    OpenSoC Tier-1 Shakti E-class SoC
 #
 # Applied AFTER t1_soc_top_eclass.sdc in both Genus and Vivado flows.
+# Safe for both Level-1 and Level-2: SPI/I2C ports only exist under
+# +define+LEVEL2 (ifdef LEVEL2 in t1_soc_top_eclass.sv).  Constraints on
+# absent ports are silently skipped via the helpers below.
 #
 # CONTENTS
+#   0. Helpers — port-existence guards (L1/L2 portable)
 #   1. Asynchronous reset false paths
-#   2. JTAG false paths  (all JTAG ports are tied off in L1/L2 stub)
-#   3. SPI / I2C false paths  (tied off in L1)
-#   4. halt_o false path  (quasi-static signal)
-#   5. UART baud-rate generator multicycle paths
-#   6. GPIO input synchroniser false path
+#   2. JTAG false paths  (ports present in both L1 and L2; outputs tied off)
+#   3. SPI false paths   (Level-2 only — ports absent in L1, skipped safely)
+#   4. I2C false paths   (Level-2 only — ports absent in L1, skipped safely)
+#   5. halt_o false path  (quasi-static signal, present in both levels)
+#   6. UART baud-rate generator multicycle paths
+#   7. GPIO input synchroniser false path
 # ==============================================================================
+
+# ------------------------------------------------------------------------------
+# 0. Helpers
+#    fp_from / fp_to: apply set_false_path only when the named port exists.
+#    Works in Genus (sizeof_collection) and Vivado (llength fallback).
+# ------------------------------------------------------------------------------
+proc fp_from {args} {
+    foreach p $args {
+        set col [get_ports -quiet $p]
+        if {[catch {set n [sizeof_collection $col]}]} { set n [llength $col] }
+        if {$n > 0} { set_false_path -from $col }
+    }
+}
+proc fp_to {args} {
+    foreach p $args {
+        set col [get_ports -quiet $p]
+        if {[catch {set n [sizeof_collection $col]}]} { set n [llength $col] }
+        if {$n > 0} { set_false_path -to $col }
+    }
+}
 
 # ------------------------------------------------------------------------------
 # 1. Asynchronous reset
 #    rst_ni is an asynchronous input.  Flops use it as async reset/preset, so
 #    there is no combinatorial path from the port through logic to a setup check.
-#    Set false path from the port itself.
 # ------------------------------------------------------------------------------
 set_false_path -from [get_ports rst_ni]
 
 # ------------------------------------------------------------------------------
-# 2. JTAG ports
+# 2. JTAG ports  (present in both L1 and L2)
 #    shakti_eclass_wrapper ties jtag_tdo_o=0, jtag_tdo_oe_o=0.
 #    All JTAG inputs are unused constants.  No timing paths exist.
 # ------------------------------------------------------------------------------
@@ -34,25 +58,19 @@ set_false_path -to   [get_ports jtag_tdo_o]
 set_false_path -to   [get_ports jtag_tdo_oe_o]
 
 # ------------------------------------------------------------------------------
-# 3. SPI interface  (Level-1: spi_sck_o=0, spi_csb_o=1, spi_sd_o=0)
-#    Outputs are tied-off constants, input is ignored.
+# 3. SPI interface  (Level-2 only — ports absent in L1, skipped by fp_* helpers)
 # ------------------------------------------------------------------------------
-set_false_path -from [get_ports spi_sd_i]
-set_false_path -to   [get_ports spi_sck_o]
-set_false_path -to   [get_ports spi_csb_o]
-set_false_path -to   [get_ports spi_sd_o]
+fp_from spi_sd_i
+fp_to   spi_sck_o spi_csb_o spi_sd_o
 
 # ------------------------------------------------------------------------------
-# 4. I2C interface  (Level-1: scl_o=1, sda_o=1 = bus idle)
-#    Open-drain outputs held high; inputs ignored.
+# 4. I2C interface  (Level-2 only — ports absent in L1, skipped by fp_* helpers)
 # ------------------------------------------------------------------------------
-set_false_path -from [get_ports i2c_scl_i]
-set_false_path -from [get_ports i2c_sda_i]
-set_false_path -to   [get_ports i2c_scl_o]
-set_false_path -to   [get_ports i2c_sda_o]
+fp_from i2c_scl_i i2c_sda_i
+fp_to   i2c_scl_o i2c_sda_o
 
 # ------------------------------------------------------------------------------
-# 5. halt_o
+# 5. halt_o  (present in both L1 and L2)
 #    Asserted only on CPU halt (ECALL/EBREAK).  Quasi-static; no timing.
 # ------------------------------------------------------------------------------
 set_false_path -to [get_ports halt_o]
