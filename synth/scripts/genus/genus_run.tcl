@@ -55,17 +55,18 @@ set_db init_lib_search_path [list \
     $pdk_root/libs.ref/sky130_fd_sc_hd/lib \
 ]
 
+set sram_lib "$design_root/synth/libs/sky130_sram_1kbyte_1rw1r_8x1024_8_TT_1p8V_25C.lib"
 read_libs [list \
     $pdk_root/libs.ref/sky130_fd_sc_hd/lib/sky130_fd_sc_hd__tt_025C_1v80.lib \
+    $sram_lib \
 ]
 
 # sky130 OpenRAM SRAM macro Liberty model
 # Obtain from: https://github.com/efabless/sky130_sram_macros
 # or generate:  openram synth/libs/sky130_sram_1rw1r_32x1024_8.cfg
 # Place the generated sky130_sram_1rw1r_32x1024_8.lib in synth/libs/
-set sram_lib "$design_root/synth/libs/sky130_sram_1rw1r_32x1024_8.lib"
 if {[file exists $sram_lib]} {
-    read_libs $sram_lib
+    #read_libs $sram_lib
     puts "INFO: Loaded SRAM macro Liberty: $sram_lib"
 } else {
     puts "WARNING: $sram_lib not found."
@@ -101,6 +102,7 @@ read_hdl -sv [list \
 # t1_sram_sky130_wrap.sv is read BEFORE rtl/memory/t1_sram_top_32.sv
 # so Genus uses the sky130 macro version of the SRAM.
 # The original t1_sram_top_32.sv behavioral mem[] is NOT read here.
+
 read_hdl -sv -define {SYNTHESIS} [list \
     $design_root/synth/rtl/t1_sram_sky130_wrap.sv   \
     $design_root/synth/rtl/t1_sram_top_32_asic.sv   \
@@ -124,14 +126,17 @@ if {$level == 2} {
 # ---------------------------------------------------------------------------
 # Elaboration
 # ---------------------------------------------------------------------------
-elaborate t1_soc_top_eclass
+#elaborate t1_soc_top_eclass
 
 # Set Level-1 SRAM size (1024 words = 4 KB)
 # For Level-2: 32768 words = 128 KB
 if {$level == 1} {
-    set_db [get_designs t1_soc_top_eclass] .param:SramNumWords 1024
+elaborate t1_soc_top_eclass -parameters { {SramNumWords 1024} }
+#    elaborate t1_soc_top_eclass -parameters { SramNumWords 1024 }
+
 } else {
-    set_db [get_designs t1_soc_top_eclass] .param:SramNumWords 32768
+elaborate t1_soc_top_eclass -parameters { {SramNumWords 32768} }
+#elaborate t1_soc_top_eclass -parameters { SramNumWords 32768 }
 }
 
 # Mark SRAM macro black-box boundary (Genus will not try to synthesise inside)
@@ -176,23 +181,19 @@ syn_opt -effort medium
 # Reports
 # ---------------------------------------------------------------------------
 report_timing  -max_paths 20               > $work_dir/reports/timing_setup.rpt
-report_timing  -max_paths 20 -late         > $work_dir/reports/timing_hold.rpt
+#report_timing  -max_paths 20 -late         > $work_dir/reports/timing_hold.rpt
 report_area                                > $work_dir/reports/area.rpt
 report_power   -depth 3                    > $work_dir/reports/power.rpt
 report_gates                               > $work_dir/reports/gates.rpt
 report_messages                            > $work_dir/reports/messages.rpt
 report_constraint -all_violators           > $work_dir/reports/violations.rpt
 
-# QoR summary
-puts "\n=== Synthesis QoR Summary ==="
-puts "  WNS  : [get_db [get_timing_paths -max_paths 1 -path_type max] .slack] ns"
-puts "  Area : [get_db [get_designs t1_soc_top_eclass] .area] um2"
-
 # ---------------------------------------------------------------------------
 # Write Outputs
 # ---------------------------------------------------------------------------
 # Gate-level netlist (Verilog)
-write_hdl -mapped > $work_dir/netlists/t1_soc_top_eclass_netlist.v
+#write_hdl -mapped > $work_dir/netlists/t1_soc_top_eclass_netlist.v
+write_hdl > $work_dir/netlists/t1_soc_top_eclass_netlist.v
 
 # Back-annotated SDC for APR (Innovus / OpenROAD)
 write_sdc > $work_dir/netlists/t1_soc_top_eclass_mapped.sdc
@@ -202,6 +203,11 @@ write_db $work_dir/db/t1_soc_top_eclass.db
 
 # SPEF stub (physical parasitics placeholder for pre-layout timing)
 # write_spef $work_dir/netlists/t1_soc_top_eclass_prelay.spef
+# QoR summary
+puts "\n=== Synthesis QoR Summary ==="
+puts "  WNS  : [get_db [get_timing_paths -max_paths 1 -path_type max] .slack] ns"
+puts "  Area : [get_db [get_designs t1_soc_top_eclass] .area] um2"
+
 
 puts "\n=== Genus synthesis complete ==="
 puts "  Netlist : $work_dir/netlists/t1_soc_top_eclass_netlist.v"
