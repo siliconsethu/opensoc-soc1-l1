@@ -78,7 +78,7 @@ $(OUT_GENUS)/reports/timing_setup.rpt: \
 	PDK_ROOT=$(PDK_ROOT) \
 	WORK_DIR=$(OUT_GENUS) \
 	LEVEL=1 \
-	$(GENUS) -no_gui -execute $(SCRIPTS_DIR)/genus/genus_run.tcl \
+	$(GENUS) -no_gui -f $(SCRIPTS_DIR)/genus/genus_run.tcl \
 	    2>&1 | tee $(OUT_GENUS)/genus_l1.log
 	@grep -E "WNS|Area|ERROR|WARNING" $(OUT_GENUS)/genus_l1.log | tail -20
 

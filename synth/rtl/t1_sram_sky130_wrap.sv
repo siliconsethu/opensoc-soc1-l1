@@ -46,26 +46,27 @@
 // Genus / Vivado will use the Liberty (.lib) model for timing; the Verilog
 // stub is only needed for elaboration.
 // ----------------------------------------------------------------------------
+/**
 (* keep_hierarchy = "yes" *)
-module sky130_sram_1rw1r_32x1024_8 (
+module sky130_sram_1rw1r_8x1024_8 (
   // Port 0: read/write
   input         clk0,
   input         csb0,       // chip select, active low
   input         web0,       // write enable, active low
-  input  [3:0]  wmask0,     // byte write mask (1 = write byte)
+  input    wmask0,     // byte write mask (1 = write byte)
   input  [9:0]  addr0,
-  input  [31:0] din0,
-  output [31:0] dout0,
+  input  [7:0] din0,
+  output [7:0] dout0,
   // Port 1: read-only
   input         clk1,
   input         csb1,       // chip select, active low
   input  [9:0]  addr1,
-  output [31:0] dout1
+  output [7:0] dout1
 );
   // Synthesis black-box: no body.
   // Timing driven by sky130_sram_1rw1r_32x1024_8.lib (read by Genus/Vivado).
 endmodule
-
+**/
 // ----------------------------------------------------------------------------
 // t1_sram_sky130_wrap — clean synchronous interface around the macro
 // ----------------------------------------------------------------------------
@@ -87,21 +88,73 @@ module t1_sram_sky130_wrap #(
   output logic [DataWidth-1:0]        rd_data_o
 );
 
-  sky130_sram_1rw1r_32x1024_8 u_macro (
+  sky130_sram_1rw1r_8x1024_8 u_macro0 (
     // Port 0: write
     .clk0   ( clk_i    ),
     .csb0   ( ~wr_en_i ),   // active low: enabled when writing
     .web0   ( 1'b0     ),   // always write-mode when Port 0 selected
-    .wmask0 ( wr_be_i  ),
+    .wmask0 ( wr_be_i[0]  ),
     .addr0  ( wr_addr_i ),
-    .din0   ( wr_data_i ),
+    .din0   ( wr_data_i[7:0] ),
     .dout0  (           ),  // Port 0 readback unused (use Port 1)
 
     // Port 1: read
     .clk1   ( clk_i    ),
     .csb1   ( ~rd_en_i ),   // active low: enabled when reading
     .addr1  ( rd_addr_i ),
-    .dout1  ( rd_data_o )   // 1-cycle registered output
+    .dout1  ( rd_data_o[7:0] )   // 1-cycle registered output
+  );
+
+  sky130_sram_1rw1r_8x1024_8 u_macro1 (
+    // Port 0: write
+    .clk0   ( clk_i    ),
+    .csb0   ( ~wr_en_i ),   // active low: enabled when writing
+    .web0   ( 1'b0     ),   // always write-mode when Port 0 selected
+    .wmask0 ( wr_be_i[1]  ),
+    .addr0  ( wr_addr_i ),
+    .din0   ( wr_data_i[15:8] ),
+    .dout0  (           ),  // Port 0 readback unused (use Port 1)
+
+    // Port 1: read
+    .clk1   ( clk_i    ),
+    .csb1   ( ~rd_en_i ),   // active low: enabled when reading
+    .addr1  ( rd_addr_i ),
+    .dout1  ( rd_data_o[15:8] )   // 1-cycle registered output
+  );
+
+  sky130_sram_1rw1r_8x1024_8 u_macro2 (
+    // Port 0: write
+    .clk0   ( clk_i    ),
+    .csb0   ( ~wr_en_i ),   // active low: enabled when writing
+    .web0   ( 1'b0     ),   // always write-mode when Port 0 selected
+    .wmask0 ( wr_be_i[2]  ),
+    .addr0  ( wr_addr_i ),
+    .din0   ( wr_data_i[23:16] ),
+    .dout0  (           ),  // Port 0 readback unused (use Port 1)
+
+    // Port 1: read
+    .clk1   ( clk_i    ),
+    .csb1   ( ~rd_en_i ),   // active low: enabled when reading
+    .addr1  ( rd_addr_i ),
+    .dout1  ( rd_data_o[23:16] )   // 1-cycle registered output
+  );
+
+
+  sky130_sram_1rw1r_8x1024_8 u_macro3 (
+    // Port 0: write
+    .clk0   ( clk_i    ),
+    .csb0   ( ~wr_en_i ),   // active low: enabled when writing
+    .web0   ( 1'b0     ),   // always write-mode when Port 0 selected
+    .wmask0 ( wr_be_i[3]  ),
+    .addr0  ( wr_addr_i ),
+    .din0   ( wr_data_i[31:24] ),
+    .dout0  (           ),  // Port 0 readback unused (use Port 1)
+
+    // Port 1: read
+    .clk1   ( clk_i    ),
+    .csb1   ( ~rd_en_i ),   // active low: enabled when reading
+    .addr1  ( rd_addr_i ),
+    .dout1  ( rd_data_o[31:24] )   // 1-cycle registered output
   );
 
 endmodule

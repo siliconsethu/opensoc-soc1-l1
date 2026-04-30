@@ -136,7 +136,13 @@ module uart (
   wire tx_pop;  // driven by serialiser below
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
-    if (!rst_ni || fifo_ctrl_q[1]) begin
+    //if (!rst_ni || fifo_ctrl_q[1]) begin
+   //hari
+    if (!rst_ni ) begin
+      tx_wr_ptr_q <= '0;
+      tx_rd_ptr_q <= '0;
+      tx_cnt_q    <= '0;
+    end else if ( fifo_ctrl_q[1]) begin //hari
       tx_wr_ptr_q <= '0;
       tx_rd_ptr_q <= '0;
       tx_cnt_q    <= '0;
@@ -260,7 +266,9 @@ module uart (
   wire [16:0] rx_half_nxt = {1'b0, rx_acc_q} + {1'b0, half_nco};
 
   always_ff @(posedge clk_i or negedge rst_ni) begin
-    if (!rst_ni || fifo_ctrl_q[0]) begin
+    //if (!rst_ni || fifo_ctrl_q[0]) begin
+   //hari
+    if (!rst_ni ) begin
       rx_wr_ptr_q        <= '0;
       rx_rd_ptr_q        <= '0;
       rx_cnt_q           <= '0;
@@ -272,7 +280,18 @@ module uart (
       rx_push_data       <= '0;
       rx_frame_err_pulse <= 1'b0;
       rx_overflow_pulse  <= 1'b0;
-    end else begin
+    end else if ( fifo_ctrl_q[0]) begin //hari
+      rx_wr_ptr_q        <= '0;
+      rx_rd_ptr_q        <= '0;
+      rx_cnt_q           <= '0;
+      rx_st_q            <= RX_IDLE;
+      rx_acc_q           <= '0;
+      rx_sr_q            <= '0;
+      rx_bcnt_q          <= '0;
+      rx_push            <= 1'b0;
+      rx_push_data       <= '0;
+      rx_frame_err_pulse <= 1'b0;
+      rx_overflow_pulse  <= 1'b0;
       rx_push            <= 1'b0;
       rx_frame_err_pulse <= 1'b0;
       rx_overflow_pulse  <= 1'b0;
