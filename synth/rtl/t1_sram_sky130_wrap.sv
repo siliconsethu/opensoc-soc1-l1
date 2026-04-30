@@ -48,7 +48,7 @@
 // ----------------------------------------------------------------------------
 /**
 (* keep_hierarchy = "yes" *)
-module sky130_sram_1rw1r_8x1024_8 (
+module sky130_sram_1kbyte_1rw1r_8x1024_8 (
   // Port 0: read/write
   input         clk0,
   input         csb0,       // chip select, active low
@@ -88,7 +88,7 @@ module t1_sram_sky130_wrap #(
   output logic [DataWidth-1:0]        rd_data_o
 );
 
-  sky130_sram_1rw1r_8x1024_8 u_macro0 (
+  sky130_sram_1kbyte_1rw1r_8x1024_8 u_macro0 (
     // Port 0: write
     .clk0   ( clk_i    ),
     .csb0   ( ~wr_en_i ),   // active low: enabled when writing
@@ -105,7 +105,7 @@ module t1_sram_sky130_wrap #(
     .dout1  ( rd_data_o[7:0] )   // 1-cycle registered output
   );
 
-  sky130_sram_1rw1r_8x1024_8 u_macro1 (
+  sky130_sram_1kbyte_1rw1r_8x1024_8 u_macro1 (
     // Port 0: write
     .clk0   ( clk_i    ),
     .csb0   ( ~wr_en_i ),   // active low: enabled when writing
@@ -122,7 +122,7 @@ module t1_sram_sky130_wrap #(
     .dout1  ( rd_data_o[15:8] )   // 1-cycle registered output
   );
 
-  sky130_sram_1rw1r_8x1024_8 u_macro2 (
+  sky130_sram_1kbyte_1rw1r_8x1024_8 u_macro2 (
     // Port 0: write
     .clk0   ( clk_i    ),
     .csb0   ( ~wr_en_i ),   // active low: enabled when writing
@@ -140,7 +140,7 @@ module t1_sram_sky130_wrap #(
   );
 
 
-  sky130_sram_1rw1r_8x1024_8 u_macro3 (
+  sky130_sram_1kbyte_1rw1r_8x1024_8 u_macro3 (
     // Port 0: write
     .clk0   ( clk_i    ),
     .csb0   ( ~wr_en_i ),   // active low: enabled when writing
