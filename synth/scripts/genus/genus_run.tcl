@@ -186,7 +186,8 @@ report_area                                > $work_dir/reports/area.rpt
 report_power   -depth 3                    > $work_dir/reports/power.rpt
 report_gates                               > $work_dir/reports/gates.rpt
 report_messages                            > $work_dir/reports/messages.rpt
-report_constraint -all_violators           > $work_dir/reports/violations.rpt
+report_constraint -all_violators -check_type clock_period          > $work_dir/reports/violations.rpt
+report_sequential -deleted           > $work_dir/reports/seq_deleted.rpt
 
 # ---------------------------------------------------------------------------
 # Write Outputs
@@ -205,8 +206,8 @@ write_db $work_dir/db/t1_soc_top_eclass.db
 # write_spef $work_dir/netlists/t1_soc_top_eclass_prelay.spef
 # QoR summary
 puts "\n=== Synthesis QoR Summary ==="
-puts "  WNS  : [get_db [get_timing_paths -max_paths 1 -path_type max] .slack] ns"
-puts "  Area : [get_db [get_designs t1_soc_top_eclass] .area] um2"
+#puts "  WNS  : [get_db [get_timing_paths -max_paths 1 -path_type max] .slack] ns"
+puts "  Area : [get_db [get_designs t1_soc_top_eclass*] .area] um2"
 
 
 puts "\n=== Genus synthesis complete ==="
